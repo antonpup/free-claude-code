@@ -225,6 +225,9 @@ class Settings(BaseSettings):
     enable_title_generation_skip: bool = True
     enable_suggestion_mode_skip: bool = True
     enable_filepath_extraction_mock: bool = True
+    admin_ui_allow_remote: bool = Field(
+        default=False, validation_alias="ADMIN_UI_ALLOW_REMOTE"
+    )
 
     # ==================== Local web server tools (web_search / web_fetch) ====================
     # Off by default: these tools perform outbound HTTP from the proxy (SSRF risk).

@@ -111,9 +111,14 @@ class AppRuntime:
             self._provider_registry.start_model_list_refresh(self.settings)
             await self._start_messaging_if_configured()
             self._publish_state()
-            logging.getLogger("uvicorn.error").info(
-                "Admin UI: %s (local-only)", admin_url
-            )
+            if getattr(self.settings, "admin_ui_allow_remote", False):
+                logging.getLogger("uvicorn.error").info(
+                    "Admin UI: %s (%s)", admin_url, "remote-allowed"
+                )
+            else:
+                logging.getLogger("uvicorn.error").info(
+                    "Admin UI: %s (local-only)", admin_url
+                )
         except Exception as exc:
             log_startup_failure(self.settings, exc)
             await best_effort(

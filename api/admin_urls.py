@@ -30,5 +30,9 @@ def local_admin_url(settings: Settings) -> str:
 
 def admin_launch_message(settings: Settings) -> str:
     """Return the startup message shown by supported launch commands."""
-
-    return f"Admin UI: {local_admin_url(settings)} (local-only)"
+    mode = (
+        "local-only"
+        if not getattr(settings, "admin_ui_allow_remote", False)
+        else "remote-allowed"
+    )
+    return f"Admin UI: {local_admin_url(settings)} ({mode})"
