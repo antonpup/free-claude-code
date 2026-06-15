@@ -354,6 +354,10 @@ Each model tier can use a different provider by setting `MODEL_OPUS`, `MODEL_SON
 
 For example, you can route Opus to `nvidia_nim/moonshotai/kimi-k2.6`, Sonnet to `open_router/openrouter/free`, Haiku to `lmstudio/qwen3.5-coder`, and keep the fallback `MODEL` on `zai/glm-5.1`.
 
+## Environment Variables
+
+All configuration is done via environment variables. See `.env.example` for the full list of available variables with defaults and descriptions.
+
 <a id="connect-your-client"></a>
 
 ## Connect Your Client
