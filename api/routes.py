@@ -21,6 +21,21 @@ router = APIRouter()
 DISCOVERED_MODEL_CREATED_AT = "1970-01-01T00:00:00Z"
 
 
+def _is_free_model(model_ref: str, settings: Settings) -> bool:
+    """Return True if the model is considered free.
+    Free if:
+    - model_ref ends with ":free", "-free", or "/free"
+    - model_ref is in the user-provided free models list.
+    """
+    if (
+        model_ref.endswith(":free")
+        or model_ref.endswith("-free")
+        or model_ref.endswith("/free")
+    ):
+        return True
+    return model_ref in settings.free_models_list
+
+
 SUPPORTED_CLAUDE_MODELS = [
     ModelResponse(
         id="claude-opus-4-20250514",
@@ -79,7 +94,11 @@ def _probe_response(allow: str) -> Response:
     return Response(status_code=204, headers={"Allow": allow})
 
 
-def _discovered_model_response(model_id: str, *, display_name: str) -> ModelResponse:
+def _discovered_model_response(
+    model_id: str, *, display_name: str, is_free: bool = False
+) -> ModelResponse:
+    if is_free:
+        display_name = f"{display_name} (free)"
     return ModelResponse(
         id=model_id,
         display_name=display_name,
@@ -88,7 +107,9 @@ def _discovered_model_response(model_id: str, *, display_name: str) -> ModelResp
 
 
 def _append_unique_model(
-    models: list[ModelResponse], seen: set[str], model: ModelResponse
+    models: list[ModelResponse],
+    seen: set[str],
+    model: ModelResponse,
 ) -> None:
     if model.id in seen:
         return
@@ -102,6 +123,7 @@ def _append_provider_model_variants(
     provider_model_ref: str,
     *,
     supports_thinking: bool | None = None,
+    is_free: bool = False,
 ) -> None:
     if supports_thinking is not False:
         _append_unique_model(
@@ -110,6 +132,7 @@ def _append_provider_model_variants(
             _discovered_model_response(
                 gateway_model_id(provider_model_ref),
                 display_name=provider_model_ref,
+                is_free=is_free,
             ),
         )
     _append_unique_model(
@@ -118,6 +141,7 @@ def _append_provider_model_variants(
         _discovered_model_response(
             no_thinking_gateway_model_id(provider_model_ref),
             display_name=f"{provider_model_ref} (no thinking)",
+            is_free=is_free,
         ),
     )
 
@@ -126,7 +150,13 @@ def _build_models_list_response(
     settings: Settings, provider_registry: ProviderRegistry | None
 ) -> ModelsListResponse:
     models: list[ModelResponse] = []
+    free_models: list[ModelResponse] = []
     seen: set[str] = set()
+
+    # Determine whether to show free models first
+    show_free_models_first = settings.show_free_models_first
+    # Determine whether to only show free models
+    only_show_free_models = settings.only_show_free_models
 
     for ref in settings.configured_chat_model_refs():
         supports_thinking = None
@@ -134,30 +164,49 @@ def _build_models_list_response(
             supports_thinking = provider_registry.cached_model_supports_thinking(
                 ref.provider_id, ref.model_id
             )
+        is_free = _is_free_model(ref.model_ref, settings)
+        if only_show_free_models and not is_free:
+            continue
         _append_provider_model_variants(
-            models,
+            free_models if show_free_models_first and is_free else models,
             seen,
             ref.model_ref,
             supports_thinking=supports_thinking,
+            is_free=is_free,
         )
 
     if provider_registry is not None:
         for model_info in provider_registry.cached_prefixed_model_infos():
+            is_free = _is_free_model(model_info.model_id, settings)
+            if only_show_free_models and not is_free:
+                continue
             _append_provider_model_variants(
-                models,
+                free_models if show_free_models_first and is_free else models,
                 seen,
                 model_info.model_id,
                 supports_thinking=model_info.supports_thinking,
+                is_free=is_free,
             )
 
     for model in SUPPORTED_CLAUDE_MODELS:
-        _append_unique_model(models, seen, model)
+        is_free = _is_free_model(model.id, settings)
+        if only_show_free_models and not is_free:
+            continue
+        claude_model = _discovered_model_response(model_id=model.id, display_name=model.display_name, is_free=is_free)
+        claude_model.created_at = model.created_at
+        _append_unique_model(
+            free_models if show_free_models_first and is_free else models,
+            seen,
+            claude_model,
+        )
+
+    combined_models = free_models + models
 
     return ModelsListResponse(
-        data=models,
-        first_id=models[0].id if models else None,
+        data=combined_models,
+        first_id=combined_models[0].id if combined_models else None,
         has_more=False,
-        last_id=models[-1].id if models else None,
+        last_id=combined_models[-1].id if combined_models else None,
     )
 
 
