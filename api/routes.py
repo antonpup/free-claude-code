@@ -95,8 +95,10 @@ def _probe_response(allow: str) -> Response:
 
 
 def _discovered_model_response(
-    model_id: str, *, display_name: str, is_free: bool = False
+    model_id: str, *, display_name: str, is_free: bool = False, supports_thinking: bool = False
 ) -> ModelResponse:
+    if not supports_thinking:
+        display_name = f"{display_name} (no thinking)"
     if is_free:
         display_name = f"{display_name} (free)"
     return ModelResponse(
@@ -133,6 +135,7 @@ def _append_provider_model_variants(
                 gateway_model_id(provider_model_ref),
                 display_name=provider_model_ref,
                 is_free=is_free,
+                supports_thinking=True
             ),
         )
     _append_unique_model(
@@ -140,8 +143,9 @@ def _append_provider_model_variants(
         seen,
         _discovered_model_response(
             no_thinking_gateway_model_id(provider_model_ref),
-            display_name=f"{provider_model_ref} (no thinking)",
+            display_name=provider_model_ref,
             is_free=is_free,
+            supports_thinking=False
         ),
     )
 
@@ -192,7 +196,7 @@ def _build_models_list_response(
         is_free = _is_free_model(model.id, settings)
         if only_show_free_models and not is_free:
             continue
-        claude_model = _discovered_model_response(model_id=model.id, display_name=model.display_name, is_free=is_free)
+        claude_model = _discovered_model_response(model_id=model.id, display_name=model.display_name, is_free=is_free, supports_thinking=True)
         claude_model.created_at = model.created_at
         _append_unique_model(
             free_models if show_free_models_first and is_free else models,
