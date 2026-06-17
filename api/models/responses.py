@@ -24,6 +24,7 @@ class ModelResponse(BaseModel):
     name: str
     display_name: str
     id: str
+    tags: set[str] = set()
     type: Literal["model"] = "model"
 
 

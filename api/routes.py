@@ -118,17 +118,21 @@ def _probe_response(allow: str) -> Response:
 
 
 def _discovered_model_response(
-    model_id: str, *, display_name: str, is_free: bool = False, supports_thinking: bool = False
+    model_id: str, *, display_name: str, is_free: bool = False, supports_thinking: bool = False, tags: set[str] = set()
 ) -> ModelResponse:
+    tags.add("free-claude-code")
     if not supports_thinking:
         display_name = f"{display_name} (no thinking)"
+        tags.add("no_thinking")
     if is_free:
         display_name = f"{display_name} (free)"
+        tags.add("free")
     return ModelResponse(
         id=model_id,
         name=display_name,
         display_name=display_name,
         created_at=DISCOVERED_MODEL_CREATED_AT,
+        tags=tags
     )
 
 
@@ -150,6 +154,7 @@ def _append_provider_model_variants(
     *,
     supports_thinking: bool | None = None,
     is_free: bool = False,
+    tags: set[str] = set()
 ) -> None:
     if supports_thinking is not False:
         _append_unique_model(
@@ -159,7 +164,8 @@ def _append_provider_model_variants(
                 gateway_model_id(provider_model_ref),
                 display_name=provider_model_ref,
                 is_free=is_free,
-                supports_thinking=True
+                supports_thinking=True,
+                tags=tags
             ),
         )
     _append_unique_model(
@@ -169,7 +175,8 @@ def _append_provider_model_variants(
             no_thinking_gateway_model_id(provider_model_ref),
             display_name=provider_model_ref,
             is_free=is_free,
-            supports_thinking=False
+            supports_thinking=False,
+            tags=tags
         ),
     )
 
