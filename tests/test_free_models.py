@@ -205,5 +205,90 @@ def test_build_models_list_no_free_models():
     assert response.has_more is False
 
 
+def test_is_free_model_with_gateway_ids():
+    """Test _is_free_model handles gateway ID normalization."""
+    settings = Settings()
+    settings.free_models_list = ["open_router/model"]
+
+    # Direct match (existing behavior)
+    assert _is_free_model("open_router/model", settings) is True
+
+    # Gateway ID in list matching underlying model
+    assert _is_free_model("anthropic/open_router/model", settings) is True
+
+    # Underlying model in list matching gateway ID
+    assert _is_free_model("open_router/model", settings) is True
+
+    # No-thinking gateway ID
+    assert _is_free_model("claude-3-freecc-no-thinking/open_router/model", settings) is True
+
+    # Non-match
+    assert _is_free_model("other/model", settings) is False
+
+
+def test_is_free_model_suffixes():
+    """Test _is_free_model still works with suffix-based free models."""
+    settings = Settings()
+    settings.free_models_list = []
+
+    # Suffixes still work
+    assert _is_free_model("model:free", settings) is True
+    assert _is_free_model("model-free", settings) is True
+    assert _is_free_model("model/free", settings) is True
+    assert _is_free_model("model", settings) is False
+
+
+def test_is_free_model_mixed_list():
+    """Test _is_free_model with mixed gateway IDs and underlying models."""
+    settings = Settings()
+    settings.free_models_list = [
+        "anthropic/open_router/model1",
+        "open_router/model2"
+    ]
+
+    # List has gateway ID, check underlying
+    assert _is_free_model("open_router/model1", settings) is True
+    assert _is_free_model("anthropic/open_router/model1", settings) is True
+
+    # List has underlying, check gateway
+    assert _is_free_model("open_router/model2", settings) is True
+    assert _is_free_model("anthropic/open_router/model2", settings) is True
+    assert _is_free_model("claude-3-freecc-no-thinking/open_router/model2", settings) is True
+
+    # Non-match
+    assert _is_free_model("other/model", settings) is False
+
+
+def test_is_free_model_empty_list():
+    """Test _is_free_model with empty free models list."""
+    settings = Settings()
+    settings.free_models_list = []
+
+    assert _is_free_model("any/model", settings) is False
+    assert _is_free_model("model:free", settings) is True  # suffix still works
+
+
+def test_is_free_model_no_thinking_variants():
+    """Test _is_free_model with no-thinking gateway ID variants."""
+    settings = Settings()
+    settings.free_models_list = ["nvidia_nim/model"]
+
+    # Direct
+    assert _is_free_model("nvidia_nim/model", settings) is True
+
+    # Standard gateway
+    assert _is_free_model("anthropic/nvidia_nim/model", settings) is True
+
+    # No-thinking gateway
+    assert _is_free_model("claude-3-freecc-no-thinking/nvidia_nim/model", settings) is True
+
+    # Reverse: no-thinking in list
+    settings_no_think = Settings()
+    settings_no_think.free_models_list = ["claude-3-freecc-no-thinking/nvidia_nim/model"]
+    assert _is_free_model("nvidia_nim/model", settings_no_think) is True
+    assert _is_free_model("anthropic/nvidia_nim/model", settings_no_think) is True
+    assert _is_free_model("claude-3-freecc-no-thinking/nvidia_nim/model", settings_no_think) is True
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

@@ -10,7 +10,7 @@ from providers.registry import ProviderRegistry
 
 from . import dependencies
 from .dependencies import get_settings, require_api_key
-from .gateway_model_ids import gateway_model_id, no_thinking_gateway_model_id
+from .gateway_model_ids import decode_gateway_model_id, gateway_model_id, no_thinking_gateway_model_id
 from .models.anthropic import MessagesRequest, TokenCountRequest
 from .models.openai_responses import OpenAIResponsesRequest
 from .models.responses import ModelResponse, ModelsListResponse
@@ -21,11 +21,21 @@ router = APIRouter()
 DISCOVERED_MODEL_CREATED_AT = "1970-01-01T00:00:00Z"
 
 
+def _normalize_model_ref(model_ref: str) -> str:
+    """Normalize a model reference by stripping gateway ID prefixes.
+    Returns the underlying provider/model format for gateway IDs, or the original string otherwise.
+    """
+    decoded = decode_gateway_model_id(model_ref)
+    if decoded:
+        return f"{decoded.provider_id}/{decoded.provider_model}"
+    return model_ref
+
+
 def _is_free_model(model_ref: str, settings: Settings) -> bool:
     """Return True if the model is considered free.
     Free if:
     - model_ref ends with ":free", "-free", or "/free"
-    - model_ref is in the user-provided free models list.
+    - model_ref is in the user-provided free models list (with gateway ID normalization)
     """
     if (
         model_ref.endswith(":free")
@@ -33,7 +43,13 @@ def _is_free_model(model_ref: str, settings: Settings) -> bool:
         or model_ref.endswith("/free")
     ):
         return True
-    return model_ref in settings.free_models_list
+
+    normalized_model_ref = _normalize_model_ref(model_ref)
+    for free_model in settings.free_models_list:
+        if normalized_model_ref == _normalize_model_ref(free_model):
+            return True
+
+    return False
 
 
 SUPPORTED_CLAUDE_MODELS = [
