@@ -21,6 +21,7 @@ class ModelResponse(BaseModel):
     created: int = 0
     owned_by: str = "free-claude-code"
     created_at: str
+    name: str
     display_name: str
     id: str
     type: Literal["model"] = "model"
