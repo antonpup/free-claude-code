@@ -230,6 +230,21 @@ Open **Admin UI → Model Config → Reasoning** to choose how FCC handles clien
 
 You can instead select **Off**, **Low**, **Medium**, **High**, **X-High**, or **Max**. Fable, Opus, Sonnet, and Haiku each have the same choices plus **Inherit**, which uses the root policy. Providers with named effort receive those names; numeric-budget providers map **Low=512**, **Medium=1,024**, **High=2,048**, **X-High=4,096**, and **Max=8,192** reasoning tokens; boolean providers receive on or off. Unsupported controls safely remain provider-defined.
 
+## Free Model Labeling & Filtering
+
+Three environment variables control free model behavior in the `/v1/models` list:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SHOW_FREE_MODELS_FIRST` | `true` | Free models appear at the top of the list |
+| `ONLY_SHOW_FREE_MODELS` | `false` | Only free models are shown |
+| `FREE_MODELS_LIST` | (empty) | Comma-separated model refs to treat as free |
+
+Free models are auto-detected by suffix (`:free`, `-free`, `/free`) or by presence in `FREE_MODELS_LIST`. 
+Models are displayed with "(free)" appended to their display name.
+
+Configuration is also available in Admin UI → **Model Routing** section.
+
 <a id="connect-your-client"></a>
 
 ## Connect Your Client
