@@ -15,6 +15,7 @@ from free_claude_code.config.admin.manifest import FIELD_BY_KEY
 from free_claude_code.config.admin.persistence import validate_updates
 from free_claude_code.config.admin.values import load_config_response
 from free_claude_code.config.model_refs import configured_chat_model_refs
+from free_claude_code.config.settings import get_settings
 
 from .dependencies import get_services
 from .ports import ApiServices
@@ -55,7 +56,10 @@ def _origin_is_local(origin: str | None) -> bool:
 
 
 def require_loopback_admin(request: Request) -> None:
-    """Allow admin access only from the local machine."""
+    """Allow admin access only from the local machine unless overridden."""
+    settings = get_settings()
+    if settings.admin_ui_allow_remote:
+        return
 
     client_host = request.client.host if request.client else None
     if not _is_loopback_host(client_host):

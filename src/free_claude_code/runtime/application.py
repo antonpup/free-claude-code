@@ -141,10 +141,15 @@ class ApplicationRuntime:
             await self.provider_manager.warm_referenced_model_cache()
             self.provider_manager.start_model_list_refresh()
             await self._start_messaging_if_configured()
-            logging.getLogger("uvicorn.error").info(
-                "Admin UI: %s (local-only)",
-                local_admin_url(self.settings),
-            )
+            admin_url = local_admin_url(self.settings)
+            if getattr(self.settings, "admin_ui_allow_remote", False):
+                logging.getLogger("uvicorn.error").info(
+                    "Admin UI: %s (%s)", admin_url, "remote-allowed"
+                )
+            else:
+                logging.getLogger("uvicorn.error").info(
+                    "Admin UI: %s (local-only)", admin_url
+                )
             self._started = True
         except asyncio.CancelledError:
             await self.close()
